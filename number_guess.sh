@@ -1,7 +1,8 @@
 #!/bin/bash
+
 PSQL="psql --username=freecodecamp --dbname=number_guess -t --no-align -c"
 
-echo "\n~~~Welcome to number guessing game~~~\n"
+echo -e "\n~~~ Welcome to the number guessing game ~~~\n"
 
 # Prompt for username
 echo "Enter your username:"
@@ -13,48 +14,51 @@ USER_INFO=$($PSQL "SELECT games_played, best_game FROM users WHERE username = '$
 #Check if user exists
 if [[ -z $USER_INFO ]]
 then
- # New user
- echo "Welcome, $USERNAME! It looks like this is your first time here."
+  # New user
+  echo "Welcome, $USERNAME! It looks like this is your first time here."
  
- #Insert new user into database
- INSERT_USER_RESULT=$($PSQL "INSERT INTO users(username) VALUES ('$USERNAME');")
- GAMES_PLAYED=0
- BEST_GAME=""
+  #Insert new user into database
+  INSERT_USER_RESULT=$($PSQL "INSERT INTO users(username) VALUES ('$USERNAME');")
+  GAMES_PLAYED=0
+  BEST_GAME=""
 
 else
- # Existing user
- IFS= "|" read GAMES_PLAYED BEST_GAME <<< "$USER_INFO"
- echo "Welcome back, $USERNAME! You have played $GAMES_PLAYED games, and your best game took $BEST_GAME guesses."
+  # Existing user
+  IFS="|" read GAMES_PLAYED BEST_GAME <<< "$USER_INFO"
+  echo "Welcome back, $USERNAME! You have played $GAMES_PLAYED games, and your best game took $BEST_GAME guesses."
 fi
+
+# Prompt for guess
+echo "Guess the number between 1 and 1000:"
+read
 
 #Function to generate a random number and handle guessing
 generate_number() {
   TARGET=$(( RANDOM % 1000 + 1 ))
-  echo "Guess the number between 1 and 1000:"
 
   GUESSES=0
   while true
   do
-    read GUESS
     (( GUESSES++ ))
 
-    if [[ ! $GUESS =~ ^[0-9]+$ ]]
+    if [[ ! $REPLY =~ ^[0-9]+$ ]]
     then
       echo "That is not an integer, guess again:"
-    elif (( GUESS < TARGET ))
+    elif (( REPLY < TARGET ))
     then
       echo "It's higher than that, guess again:"
-    elif (( GUESS > TARGET ))
+    elif (( REPLY > TARGET ))
     then
       echo "It's lower than that, guess again:"
     else
-      echo "You guessed it in $GUESSES guesses. The number was $TARGET."
+      echo "You guessed it in $GUESSES tries. The secret number was $TARGET. Nice job!"
       break
     fi
+
+    read
   done
 
-
-# Update user stats in the database
+  # Update user stats in the database
   (( GAMES_PLAYED++ ))
 
   if [[ -z $BEST_GAME || $GUESSES -lt $BEST_GAME ]]
@@ -62,7 +66,7 @@ generate_number() {
     BEST_GAME=$GUESSES
   fi
 
-# Update user data in the database
+  # Update user data in the database
   if [[ $BEST_GAME == "NULL" ]]
   then
     UPDATE_USER_RESULT=$($PSQL "UPDATE users SET games_played=$GAMES_PLAYED, best_game=NULL WHERE username='$USERNAME';")
@@ -73,4 +77,3 @@ generate_number() {
 
 # Start the game
 generate_number
-
