@@ -25,8 +25,52 @@ else
  # Existing user
  IFS= "|" read GAMES_PLAYED BEST_GAME <<< "$USER_INFO"
  echo "Welcome back, $USERNAME! You have played $GAMES_PLAYED games, and your best game took $BEST_GAME guesses."
- fi
+fi
 
 #Function to generate a random number and handle guessing
+generate_number() {
+  TARGET=$(( RANDOM % 1000 + 1 ))
+  echo "Guess the number between 1 and 1000:"
 
+  GUESSES=0
+  while true
+  do
+    read GUESS
+    (( GUESSES++ ))
+
+    if [[ ! $GUESS =~ ^[0-9]+$ ]]
+    then
+      echo "That is not an integer, guess again:"
+    elif (( GUESS < TARGET ))
+    then
+      echo "It's higher than that, guess again:"
+    elif (( GUESS > TARGET ))
+    then
+      echo "It's lower than that, guess again:"
+    else
+      echo "You guessed it in $GUESSES guesses. The number was $TARGET."
+      break
+    fi
+  done
+
+
+# Update user stats in the database
+  (( GAMES_PLAYED++ ))
+
+  if [[ -z $BEST_GAME || $GUESSES -lt $BEST_GAME ]]
+  then
+    BEST_GAME=$GUESSES
+  fi
+
+# Update user data in the database
+  if [[ $BEST_GAME == "NULL" ]]
+  then
+    UPDATE_USER_RESULT=$($PSQL "UPDATE users SET games_played=$GAMES_PLAYED, best_game=NULL WHERE username='$USERNAME';")
+  else
+    UPDATE_USER_RESULT=$($PSQL "UPDATE users SET games_played=$GAMES_PLAYED, best_game=$BEST_GAME WHERE username='$USERNAME';")
+  fi
+}
+
+# Start the game
+generate_number
 
